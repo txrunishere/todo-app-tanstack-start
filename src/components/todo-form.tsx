@@ -1,7 +1,7 @@
 import { Input } from '@/components/ui/input'
 import { prisma } from '@/db/prisma'
 import { createServerFn, useServerFn } from '@tanstack/react-start'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { z } from 'zod'
 import { redirect } from '@tanstack/react-router'
 import type { Todo } from '@/generated/prisma/browser'
@@ -37,7 +37,7 @@ const editTodoServerFn = createServerFn({ method: 'POST' })
     throw redirect({ to: '/' })
   })
 
-export const TodoForm = ({ todo }: { todo: Todo }) => {
+export const TodoForm = ({ todo }: { todo: Todo | null }) => {
   const todoInputRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState<boolean>(false)
   const addTodo = useServerFn(addTodoServerFn)

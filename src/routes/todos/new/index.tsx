@@ -31,7 +31,7 @@ function RouteComponent() {
         </CardHeader>
 
         <CardContent>
-          <TodoForm />
+          <TodoForm todo={null} />
         </CardContent>
       </Card>
     </div>
