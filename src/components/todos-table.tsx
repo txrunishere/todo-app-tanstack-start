@@ -17,11 +17,50 @@ import {
 } from '@/components/ui/table'
 import { Edit, ListCheckIcon, Plus, Trash } from 'lucide-react'
 import { Button } from './ui/button'
-import { Link } from '@tanstack/react-router'
+import { Link, useRouter } from '@tanstack/react-router'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
+import { createServerFn, useServerFn } from '@tanstack/react-start'
+import z from 'zod'
+import { prisma } from '@/db/prisma'
+
+const deleteTodoServerFn = createServerFn({ method: 'POST' })
+  .inputValidator(z.object({ id: z.string().min(1, 'ID is required') }))
+  .handler(async ({ data: { id } }) => {
+    await prisma.todo.delete({
+      where: {
+        id,
+      },
+    })
+
+    return { error: false }
+  })
+
+const toggleTodoServerFn = createServerFn({ method: 'POST' })
+  .inputValidator(
+    z.object({
+      id: z.string().min(1, 'ID is required'),
+      isCompleted: z.boolean(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const { id, isCompleted } = data
+
+    await prisma.todo.update({
+      where: {
+        id,
+      },
+      data: {
+        isCompleted,
+      },
+    })
+  })
 
 export const TodosTable = ({ todos }: { todos: Todo[] }) => {
+  const deleteTodo = useServerFn(deleteTodoServerFn)
+  const toggleTodo = useServerFn(toggleTodoServerFn)
+  const router = useRouter()
+
   if (todos.length === 0) {
     return (
       <Empty className="border max-w-4xl mx-auto">
@@ -56,9 +95,26 @@ export const TodosTable = ({ todos }: { todos: Todo[] }) => {
       </TableHeader>
       <TableBody>
         {todos.map((todo) => (
-          <TableRow key={todo.id}>
+          <TableRow
+            key={todo.id}
+            onClick={async (e) => {
+              const target = e.target as HTMLElement
+              if (
+                target.tagName === 'BUTTON' ||
+                target.closest('button') ||
+                target.tagName === 'A' ||
+                target.closest('a')
+              )
+                return
+
+              await toggleTodo({
+                data: { id: todo.id, isCompleted: !todo.isCompleted },
+              })
+              router.invalidate()
+            }}
+          >
             <TableCell>
-              <Checkbox />
+              <Checkbox checked={todo.isCompleted} />
             </TableCell>
             <TableCell
               className={cn('font-medium', todo.isCompleted && 'line-through')}
@@ -74,7 +130,14 @@ export const TodosTable = ({ todos }: { todos: Todo[] }) => {
                   <Edit />
                 </Link>
               </Button>
-              <Button size="sm" variant="destructive">
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={async () => {
+                  await deleteTodo({ data: { id: todo.id } })
+                  router.invalidate()
+                }}
+              >
                 <Trash />
               </Button>
             </TableCell>
